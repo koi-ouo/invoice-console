@@ -4,6 +4,9 @@
 <title>報價系統</title>
 <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <style>
 :root{--bg:#f6f5f3;--fg:#2f2f2f;--mut:#777;--card:#fff;--bd:#d9d6d0;--ac:#2f2f2f;--ab:#fff;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 @media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1b1b1b;--fg:#eee;--mut:#999;--card:#262626;--bd:#444;--ac:#eee;--ab:#1b1b1b}}
@@ -48,6 +51,12 @@ textarea{resize:vertical;min-height:38px}
 </style></head><body>
 <nav id="nav"></nav><main id="v">載入中…</main>
 <script>
+const firebaseConfig={apiKey:"AIzaSyBEyTNOKZi1PRKxbApyktEsk1GiKb4ApK4",authDomain:"invoice-console-e7f22.firebaseapp.com",projectId:"invoice-console-e7f22",storageBucket:"invoice-console-e7f22.firebasestorage.app",messagingSenderId:"1022195116203",appId:"1:1022195116203:web:5b7936bee7c43a4131afee"};
+firebase.initializeApp(firebaseConfig);const auth=firebase.auth(),fs=firebase.firestore();
+const dbShim={doc:p=>{const r=fs.doc(p);return{get:async()=>{const x=await r.get();return{exists:x.exists,id:x.id,data:()=>x.data()}},set:d=>r.set(JSON.parse(JSON.stringify(d))),delete:()=>r.delete()}},
+ collection:c=>({get:async()=>{const x=await fs.collection(c).get();return{docs:x.docs.map(d=>({id:d.id,data:()=>d.data()}))}}})};
+function loginView(){$('#nav').innerHTML='';$('#v').innerHTML='<div class="card" style="max-width:360px;margin:40px auto"><h3>登入</h3><label>Email</label><input id="em" type="email" autocomplete="username"><label>密碼</label><input id="pw2" type="password" autocomplete="current-password"><div class="row" style="margin-top:10px"><button class="btn" onclick="login()">登入</button></div><p id="le" class="warn"></p></div>'}
+async function login(){try{await auth.signInWithEmailAndPassword($('#em').value.trim(),$('#pw2').value);init()}catch(e){$('#le').textContent='登入失敗：'+(e.code||e.message)}}
 const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const DEF={co:'China Asia Services Company Limited 中亞服務有限公司',addr:'Flat C, 10/F, Evernew Commercial Center, 33-35 Pine Street, Tai Kok Tsui, Kowloon, Hong Kong',contact:'Gianne Wong | 852-9361 0933 | giannew@gmail.com',terms:'Credit Terms: 60 days\nPayment Schedule: Full payment\nCheque payable to: China Asia Services Company Limited\nHSBC Bank Account: 521-345603-838',signer:'Gianne Wong, Account Director',mk:15,step:1,days:14};
 const S={db:null,tab:'quotes',prods:[],quotes:[],set:{...DEF},q:null,res:[]};
@@ -58,12 +67,12 @@ const price=l=>{if(l.p!==undefined&&l.p!=='')return +l.p;if(l.cost===''||l.cost=
 function calc(q){let sub=0,cost=0;q.lines.forEach(l=>{sub+=price(l)*(+l.q||0);cost+=(+l.cost||0)*(+l.q||0)});
  const disc=Math.round(sub*(+q.dpct||0)/100),tot=sub-disc,miss=q.lines.filter(l=>l.cost===''||l.cost==null).length;
  return{sub,disc,tot,cost,profit:tot-cost,miss}}
-async function init(){try{S.db=await claude.use('db')}catch(e){}
+async function init(){S.db=await new Promise(r=>{const un=auth.onAuthStateChanged(u=>{un();r(u?dbShim:null)})});if(!S.db)return loginView();
  if(S.db){try{const s=await S.db.doc('settings/main').get();if(s.exists)S.set={...DEF,...s.data()};
   const c=await S.db.collection('catalog').get();S.prods=c.docs.flatMap(d=>d.data().items||[]);
   const q=await S.db.collection('quotes').get();S.quotes=q.docs.map(d=>d.data())}catch(e){console.error(e)}}
  go('quotes')}
-function go(t){S.tab=t;$('#nav').innerHTML=[['quotes','客戶記錄'],['edit','編輯'],['prods','產品 ('+S.prods.length+')'],['set','設定']].map(([k,n])=>`<button class="${k===t?'on':''}" onclick="go('${k}')">${n}</button>`).join('');
+function go(t){S.tab=t;$('#nav').innerHTML=[['quotes','客戶記錄'],['edit','編輯'],['prods','產品 ('+S.prods.length+')'],['set','設定']].map(([k,n])=>`<button class="${k===t?'on':''}" onclick="go('${k}')">${n}</button>`).join('')+'<button style="margin-left:auto" onclick="auth.signOut().then(()=>location.reload())">登出</button>';
  ({quotes:vQuotes,edit:vEdit,prods:vProds,set:vSet})[t]()}
 function vQuotes(){$('#v').innerHTML=(S.db?'':'<p class="warn">未登入，資料不會同步保存。</p>')+'<div class="row"><button class="btn" onclick="newQ()">＋ 新增報價單</button><input id="cf" style="flex:1;min-width:160px" placeholder="搜尋客戶或報價單編號…" value="'+esc(S.cf||'')+'" oninput="S.cf=this.value;drawC()"></div><div id="cl" style="margin-top:12px"></div>';drawC()}
 function drawC(){const f=(S.cf||'').toLowerCase(),by={};
