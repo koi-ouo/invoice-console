@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-HK"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>報價系統</title>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{--bg:#f6f5f3;--fg:#2f2f2f;--mut:#777;--card:#fff;--bd:#d9d6d0;--ac:#2f2f2f;--ab:#fff;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1b1b1b;--fg:#eee;--mut:#999;--card:#262626;--bd:#444;--ac:#eee;--ab:#1b1b1b}}
+:root[data-theme="dark"]{--bg:#1b1b1b;--fg:#eee;--mut:#999;--card:#262626;--bd:#444;--ac:#eee;--ab:#1b1b1b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 'Open Sans',system-ui,sans-serif}
+nav{display:flex;gap:4px;padding:10px 12px;border-bottom:1px solid var(--bd);position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);z-index:5;overflow-x:auto}
+nav button{border:0;background:none;color:var(--mut);padding:8px 14px;font:600 13px 'Open Sans';letter-spacing:.08em;cursor:pointer;white-space:nowrap}
+nav button.on{color:var(--fg);border-bottom:2px solid var(--fg)}
+main{max-width:900px;margin:0 auto;padding:14px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:12px;margin-bottom:12px}
+h3{margin:0 0 8px;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut)}
+label{display:block;font-size:12px;color:var(--mut);margin:6px 0 2px}
+input,textarea,select{width:100%;padding:8px;border:1px solid var(--bd);border-radius:6px;background:var(--bg);color:var(--fg);font:inherit}
+textarea{resize:vertical;min-height:38px}
+.g{display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.btn{background:var(--ac);color:var(--ab);border:0;border-radius:6px;padding:9px 14px;font:600 13px 'Open Sans';cursor:pointer}
+.btn.s{background:none;color:var(--fg);border:1px solid var(--bd)}.btn:disabled{opacity:.4}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.res{max-height:240px;overflow:auto;border:1px solid var(--bd);border-radius:6px;margin-top:6px}
+.res div{padding:8px;border-bottom:1px solid var(--bd);cursor:pointer;font-size:13px}.res div:hover{background:var(--bg)}
+.ln{border-top:1px solid var(--bd);padding-top:8px;margin-top:8px}
+.warn{color:#b45309;font-size:12px}.mut{color:var(--mut);font-size:12px}
+.paper{background:#fff;color:#3a3a3a;padding:44px 40px;max-width:794px;margin:0 auto;font-size:12.5px;letter-spacing:.04em;overflow-x:auto;box-shadow:0 1px 8px #0002}
+.paper h1{font-size:34px;letter-spacing:.22em;margin:0;font-weight:700}
+.paper .hd{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:56px}
+.paper .co{text-align:right;font-weight:700;letter-spacing:.1em;text-transform:uppercase;font-size:12px;max-width:300px}
+.paper .co small{display:block;font-weight:400;letter-spacing:.04em;text-transform:none;margin-top:6px;color:#666}
+.paper .lb{font-weight:700;letter-spacing:.14em;text-transform:uppercase;font-size:11.5px}
+.paper .meta{display:flex;justify-content:space-between;gap:20px;margin-bottom:40px;flex-wrap:wrap}
+.paper .mr{text-align:right}.paper .mr b{margin-right:8px}
+.paper table{width:100%;border-collapse:collapse;min-width:520px}
+.paper th{font-size:11.5px;letter-spacing:.14em;text-align:right;padding:10px 6px;border-bottom:1px solid #3a3a3a}
+.paper th:first-child,.paper td:first-child{text-align:left}
+.paper td{padding:11px 6px;text-align:right;vertical-align:top;white-space:pre-line}
+.paper tr.ex td{color:#666;padding:5px 6px}
+.paper .tot{border-top:1px solid #3a3a3a;margin-top:6px;padding-top:10px;text-align:right}
+.paper .tot div{display:flex;justify-content:flex-end;gap:36px;padding:3px 6px}
+.paper .tot .gt{font-weight:700;letter-spacing:.14em}
+.paper .ft{display:flex;justify-content:space-between;gap:30px;margin-top:56px;flex-wrap:wrap}
+.paper .sig{min-width:200px;margin-top:34px}.paper .sig i{display:block;border-bottom:1px solid #3a3a3a;height:34px}
+@media print{body{background:#fff}nav,main>*:not(#pw){display:none!important}main{padding:0;max-width:none}.paper{box-shadow:none;padding:0}@page{margin:16mm}}
+</style></head><body>
+<nav id="nav"></nav><main id="v">載入中…</main>
+<script>
+const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const DEF={co:'China Asia Services Company Limited 中亞服務有限公司',addr:'Flat C, 10/F, Evernew Commercial Center, 33-35 Pine Street, Tai Kok Tsui, Kowloon, Hong Kong',contact:'Gianne Wong | 852-9361 0933 | giannew@gmail.com',terms:'Credit Terms: 60 days\nPayment Schedule: Full payment\nCheque payable to: China Asia Services Company Limited\nHSBC Bank Account: 521-345603-838',signer:'Gianne Wong, Account Director',mk:15,step:1,days:14};
+const S={db:null,tab:'quotes',prods:[],quotes:[],set:{...DEF},q:null,res:[]};
+const today=()=>new Date().toISOString().slice(0,10),addD=(d,n)=>{const x=new Date(d+'T00:00');x.setDate(x.getDate()+n);return x.toISOString().slice(0,10)};
+const fd=s=>s?new Date(s+'T00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):'';
+const n0=n=>Number(n||0).toLocaleString('en-HK',{maximumFractionDigits:2}),hk=n=>'HK$ '+n0(n);
+const price=l=>{if(l.p!==undefined&&l.p!=='')return +l.p;if(l.cost===''||l.cost==null)return 0;const st=+S.set.step||1;return Math.ceil(l.cost*(1+(+l.mk||0)/100)/st)*st};
+function calc(q){let sub=0,cost=0;q.lines.forEach(l=>{sub+=price(l)*(+l.q||0);cost+=(+l.cost||0)*(+l.q||0)});
+ const disc=Math.round(sub*(+q.dpct||0)/100),tot=sub-disc,miss=q.lines.filter(l=>l.cost===''||l.cost==null).length;
+ return{sub,disc,tot,cost,profit:tot-cost,miss}}
+async function init(){try{S.db=await claude.use('db')}catch(e){}
+ if(S.db){try{const s=await S.db.doc('settings/main').get();if(s.exists)S.set={...DEF,...s.data()};
+  const c=await S.db.collection('catalog').get();S.prods=c.docs.flatMap(d=>d.data().items||[]);
+  const q=await S.db.collection('quotes').get();S.quotes=q.docs.map(d=>d.data())}catch(e){console.error(e)}}
+ go('quotes')}
+function go(t){S.tab=t;$('#nav').innerHTML=[['quotes','報價單'],['edit','編輯'],['prods','產品 ('+S.prods.length+')'],['set','設定']].map(([k,n])=>`<button class="${k===t?'on':''}" onclick="go('${k}')">${n}</button>`).join('');
+ ({quotes:vQuotes,edit:vEdit,prods:vProds,set:vSet})[t]()}
+function vQuotes(){const L=[...S.quotes].sort((a,b)=>(b.upd||'').localeCompare(a.upd||''));
+ $('#v').innerHTML=(S.db?'':'<p class="warn">未登入，資料不會同步保存。</p>')+`<button class="btn" onclick="newQ()">＋ 新增報價單</button><div style="margin-top:12px">`+(L.map(q=>`<div class="card" style="cursor:pointer" onclick="openQ('${q.id}')"><b>${esc(q.no)} v${q.v}</b> · ${esc(q.client)||'(未填客戶)'}<div class="mut">${esc(q.forText)} · ${fd(q.date)} · ${hk(calc(q).tot)}${q.reason?' · 修改：'+esc(q.reason):''}</div></div>`).join('')||'<p class="mut">暫時沒有報價單</p>')+'</div>'}
+function newQ(){const d=today(),b='QUO-'+d.replace(/-/g,''),n=new Set(S.quotes.filter(q=>q.no.startsWith(b)).map(q=>q.no)).size+1;
+ S.q={id:'',no:b+String(n).padStart(3,'0'),v:1,client:'',addr:'',contact:'',forText:'',date:d,valid:addD(d,+S.set.days||14),lines:[],dpct:0,dlabel:'Bulk discount',extras:[],terms:S.set.terms,reason:''};S.q.id=S.q.no+'v1';go('edit')}
+function openQ(id){S.q=JSON.parse(JSON.stringify(S.quotes.find(q=>q.id===id)));go('edit')}
+function vEdit(){const q=S.q;if(!q){$('#v').innerHTML='<p class="mut">請先在「報價單」新增或打開一張。</p>';return}
+ $('#v').innerHTML=`<div class="card"><h3>${esc(q.no)} · 版本 v${q.v}</h3><div class="g"><div><label>客戶名稱</label><input data-k="client" value="${esc(q.client)}"></div><div><label>項目 (For)</label><input data-k="forText" value="${esc(q.forText)}"></div><div><label>報價日期</label><input type="date" data-k="date" value="${q.date}"></div><div><label>有效至</label><input type="date" data-k="valid" value="${q.valid}"></div></div>
+ <label>客戶地址</label><textarea data-k="addr">${esc(q.addr)}</textarea><label>客戶聯絡人</label><textarea data-k="contact">${esc(q.contact)}</textarea></div>
+ <div class="card"><h3>產品</h3><input id="sq" placeholder="搜尋型號或名稱…" oninput="srch(this.value)"><div id="rs"></div><div class="row" style="margin-top:8px"><button class="btn s" onclick="addL()">＋ 自訂 / 套裝項目</button></div><div id="ls"></div></div>
+ <div class="card"><h3>折扣與額外項目</h3><div class="g"><div><label>折扣名稱</label><input data-k="dlabel" value="${esc(q.dlabel)}"></div><div><label>折扣 %</label><input type="number" data-k="dpct" value="${q.dpct}"></div></div><div id="ex"></div><button class="btn s" style="margin-top:8px" onclick="addX()">＋ 額外項目 (如送貨)</button><label>付款條款</label><textarea data-k="terms">${esc(q.terms)}</textarea></div>
+ <div class="card"><h3>內部資料（不會印在報價單）</h3><div id="sm"></div><label>修改原因（另存新版本時記錄）</label><input data-k="reason" value="${esc(q.reason)}" placeholder="例：客戶將數量改為 20；供應商給 4% 折扣"><div class="row" style="margin-top:10px"><button class="btn" onclick="saveQ(false)">儲存</button><button class="btn s" onclick="saveQ(true)">另存為新版本</button><button class="btn s" id="pb" onclick="window.print()">列印 / 存成 PDF</button></div><div id="msg" class="mut"></div></div>
+ <div id="pw"><div class="paper" id="paper"></div></div>`;lines();exs();refresh()}
+function lines(){$('#ls').innerHTML=S.q.lines.map((l,i)=>`<div class="ln"><textarea data-i="${i}" data-f="d" placeholder="描述">${esc(l.d)}</textarea><div class="g" style="margin-top:6px"><div><label>成本價 ${l.ref?'(上次 '+n0(l.ref)+')':''}</label><input type="number" inputmode="decimal" data-i="${i}" data-f="cost" value="${l.cost}" placeholder="${l.ref?n0(l.ref):'待詢價'}"></div><div><label>加價 %</label><input type="number" data-i="${i}" data-f="mk" value="${l.mk}"></div><div><label>單價 (可手改)</label><input type="number" data-i="${i}" data-f="p" value="${price(l)||''}"></div><div><label>數量</label><input type="number" data-i="${i}" data-f="q" value="${l.q}"></div></div><button class="btn s" style="margin-top:6px" onclick="S.q.lines.splice(${i},1);lines();refresh()">刪除</button></div>`).join('')}
+function exs(){$('#ex').innerHTML=S.q.extras.map((x,i)=>`<div class="g" style="margin-top:6px"><input data-x="${i}" data-f="d" value="${esc(x.d)}" placeholder="Delivery Service"><input data-x="${i}" data-f="n" value="${esc(x.n)}" placeholder="Included"><button class="btn s" onclick="S.q.extras.splice(${i},1);exs();refresh()">刪除</button></div>`).join('')}
+const addL=(d='',ref='')=>{S.q.lines.push({d,q:1,cost:'',ref,mk:+S.set.mk||0,p:''});lines();refresh()},addX=()=>{S.q.extras.push({d:'Delivery Service',n:'Included'});exs()};
+function srch(v){v=v.toLowerCase().trim();S.res=v?S.prods.filter(p=>(p.c+' '+p.e+' '+p.z).toLowerCase().includes(v)).slice(0,30):[];
+ $('#rs').innerHTML=S.res.length?'<div class="res">'+S.res.map((p,i)=>`<div onclick="pick(${i})"><b>${esc(p.c)}</b> ${esc(p.e)}<span class="mut"> · ${esc(p.z)} · 上次 ${n0(p.b)}</span></div>`).join('')+'</div>':''}
+function pick(i){const p=S.res[i];addL(p.c+'\n'+p.e,p.b);$('#sq').value='';$('#rs').innerHTML=''}
+document.addEventListener('input',e=>{const t=e.target,q=S.q;if(t.dataset.s){S.set[t.dataset.s]=t.value;return}if(!q||S.tab!=='edit')return;
+ const{k,i,f,x}=t.dataset;if(k)q[k]=t.value;else if(i!==undefined){const l=q.lines[i];l[f]=t.value;if(f==='cost'||f==='mk'){l.p='';t.closest('.ln').querySelector('[data-f=p]').value=price(l)||''}}else if(x!==undefined)q.extras[x][f]=t.value;refresh()});
+function refresh(){const q=S.q,c=calc(q);if(!$('#paper'))return;
+ $('#sm').innerHTML=`成本 ${hk(c.cost)} · 售價 ${hk(c.tot)} · <b>利潤 ${hk(c.profit)}（${c.tot?(c.profit/c.tot*100).toFixed(1):0}%）</b>`+(c.miss?`<div class="warn">還有 ${c.miss} 項未填成本價，填完才能列印。</div>`:'');$('#pb').disabled=!!c.miss||!q.lines.length;
+ const s=S.set;$('#paper').innerHTML=`<div class="hd"><h1>QUOTATION</h1><div class="co">${esc(s.co)}<small>${esc(s.addr)}<br>${esc(s.contact)}</small></div></div>
+ <div class="meta"><div><div class="lb">Issued to:</div>${esc(q.client)}<br>${esc(q.addr).replace(/\n/g,'<br>')}<br>${esc(q.contact).replace(/\n/g,'<br>')}</div><div class="mr"><div><b class="lb">Quotation No:</b>${esc(q.no)} v${q.v}</div><div><b class="lb">Date:</b>${fd(q.date)}</div><div><b class="lb">Valid until:</b>${fd(q.valid)}</div>${q.forText?`<div><b class="lb">For:</b>${esc(q.forText)}</div>`:''}</div></div>
+ <table><tr><th>DESCRIPTION</th><th>RATE</th><th>QTY</th><th>TOTAL</th></tr>${q.lines.map(l=>`<tr><td>${esc(l.d)}</td><td>${n0(price(l))}</td><td>${esc(l.q)}</td><td>${n0(price(l)*(+l.q||0))}</td></tr>`).join('')}${q.extras.map(x=>`<tr class="ex"><td>${esc(x.d)}</td><td></td><td></td><td>${esc(x.n)}</td></tr>`).join('')}</table>
+ <div class="tot"><div><span class="lb">Subtotal</span><span>${hk(c.sub)}</span></div>${c.disc?`<div><span>${esc(q.dlabel)} ${q.dpct}%</span><span>- ${hk(c.disc)}</span></div>`:''}<div class="gt"><span>TOTAL</span><span>${hk(c.tot)}</span></div></div>
+ <div class="ft"><div><div class="lb">Payment info:</div>${esc(q.terms).replace(/\n/g,'<br>')}</div></div>
+ <div class="ft"><div class="sig"><i></i>${esc(s.signer)}<br>${esc(s.co.split('  ')[0])}</div><div class="sig"><i></i>Signed and accepted by<br>${esc(q.client)}</div></div>`}
+async function saveQ(nv){const q=S.q;if(nv){q.v++;q.id=q.no+'v'+q.v}q.upd=new Date().toISOString();
+ const i=S.quotes.findIndex(x=>x.id===q.id);i<0?S.quotes.push(JSON.parse(JSON.stringify(q))):S.quotes[i]=JSON.parse(JSON.stringify(q));
+ try{if(S.db)await S.db.doc('quotes/'+q.id).set(q);$('#msg').textContent='已儲存 '+q.no+' v'+q.v;if(nv)vEdit()}catch(e){$('#msg').textContent='儲存失敗：'+(e.message||e)}}
+function vProds(){$('#v').innerHTML=`<div class="card"><h3>匯入供應商 Excel</h3><p class="mut">欄位：Item、Description、English Desc、Buyin Price。以 Item 型號為準，已有的更新、新的新增，舊報價單不受影響。</p><input type="file" accept=".xlsx,.xls,.csv" onchange="imp(this.files[0])"><p id="im" class="mut">目前共 ${S.prods.length} 項產品。</p></div>`}
+async function imp(f){if(!f)return;const m=$('#im');try{const wb=XLSX.read(await f.arrayBuffer()),rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1});
+ const hi=rows.findIndex(r=>r.some(c=>/^item/i.test(String(c).trim())));if(hi<0)throw new Error('找不到 Item 欄');const h=rows[hi].map(c=>String(c||'').trim().toLowerCase());
+ const col=re=>h.findIndex(c=>re.test(c)),ci=col(/^item/),cz=col(/^desc/),ce=col(/english/),cb=col(/buyin|price/);
+ const map=new Map(S.prods.map(p=>[p.c,p]));let nw=0;
+ rows.slice(hi+1).forEach(r=>{const c=String(r[ci]??'').trim();if(!c)return;const b=parseFloat(String(r[cb]).replace(/[^0-9.]/g,''))||0;if(!map.has(c))nw++;map.set(c,{c,z:String(r[cz]??'').trim(),e:String(r[ce]??'').trim(),b})});
+ S.prods=[...map.values()];if(S.db){const old=await S.db.collection('catalog').get();for(let i=0;i*300<S.prods.length;i++)await S.db.doc('catalog/c'+i).set({items:S.prods.slice(i*300,i*300+300)});
+  for(const d of old.docs){if(+d.id.slice(1)*300>=S.prods.length)await S.db.doc('catalog/'+d.id).delete()}}
+ go('prods');$('#im').textContent=`匯入完成：共 ${S.prods.length} 項，新增 ${nw} 項。`}catch(e){m.textContent='匯入失敗：'+(e.message||e)}}
+function vSet(){const s=S.set,F=(k,n,t='input')=>`<label>${n}</label><${t} data-s="${k}">${t==='textarea'?esc(s[k])+'</textarea>':''}`.replace(`data-s="${k}">`,`data-s="${k}" value="${esc(s[k])}">`);
+ $('#v').innerHTML=`<div class="card"><h3>公司資料（印在報價單）</h3><label>公司名稱</label><input data-s="co" value="${esc(s.co)}"><label>地址</label><textarea data-s="addr">${esc(s.addr)}</textarea><label>聯絡資料</label><input data-s="contact" value="${esc(s.contact)}"><label>簽署人</label><input data-s="signer" value="${esc(s.signer)}"><label>預設付款條款</label><textarea data-s="terms">${esc(s.terms)}</textarea></div>
+ <div class="card"><h3>計價預設</h3><div class="g"><div><label>預設加價 %</label><input type="number" data-s="mk" value="${s.mk}"></div><div><label>單價進位到（HK$）</label><input type="number" data-s="step" value="${s.step}"></div><div><label>有效期（天）</label><input type="number" data-s="days" value="${s.days}"></div></div></div><button class="btn" onclick="saveS()">儲存設定</button> <span id="sm2" class="mut"></span>`}
+async function saveS(){try{if(S.db)await S.db.doc('settings/main').set(S.set);$('#sm2').textContent='已儲存'}catch(e){$('#sm2').textContent='失敗：'+(e.message||e)}}
+init();
+</script></body></html>
